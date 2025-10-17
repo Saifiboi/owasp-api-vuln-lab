@@ -3,6 +3,7 @@ package edu.nu.owaspapivulnlab.web;
 import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import edu.nu.owaspapivulnlab.model.AppUser;
 import edu.nu.owaspapivulnlab.repo.AppUserRepository;
@@ -15,9 +16,11 @@ import java.util.Map;
 @RequestMapping("/api/users")
 public class UserController {
     private final AppUserRepository users;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserController(AppUserRepository users) {
+    public UserController(AppUserRepository users, PasswordEncoder passwordEncoder) {
         this.users = users;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // // VULNERABILITY(API1: BOLA/IDOR) - no ownership check, any authenticated OR anonymous GET (due to SecurityConfig) can fetch any user
@@ -53,6 +56,8 @@ public class UserController {
     // VULNERABILITY(API6: Mass Assignment) - binds role/isAdmin from client
     @PostMapping
     public AppUser create(@Valid @RequestBody AppUser body) {
+        // FIXED: Hash password with BCrypt before saving
+        body.setPassword(passwordEncoder.encode(body.getPassword()));
         return users.save(body);
     }
 
