@@ -7,6 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import edu.nu.owaspapivulnlab.model.AppUser;
 import edu.nu.owaspapivulnlab.repo.AppUserRepository;
+import org.springframework.security.core.Authentication;
 
 import java.util.HashMap;
 import java.util.List;
@@ -69,8 +70,17 @@ public class UserController {
 
     // VULNERABILITY(API3: Excessive Data Exposure) - returns all users including sensitive fields
     @GetMapping
-    public List<AppUser> list() {
-        return users.findAll();
+    public List<AppUser> list(Authentication auth) {
+        
+        AppUser me = users.findByUsername(auth != null ? auth.getName() : "anonymous").orElse(null);
+        if (me == null) {
+            throw new RuntimeException("Unauthorized");
+        }
+        if (me.isAdmin()) {
+            return users.findAll();
+        }
+
+        return List.of(me);
     }
 
     // VULNERABILITY(API5: Broken Function Level Authorization) - allows regular users to delete anyone
