@@ -25,10 +25,35 @@ public class AccountController {
     }
 
     // VULNERABILITY(API1: BOLA) - no check whether account belongs to caller
+    // @GetMapping("/{id}/balance")
+    // public Double balance(@PathVariable("id") Long id) {
+    //     Account a = accounts.findById(id).orElseThrow(() -> new RuntimeException("Account not found"));
+    //     return a.getBalance();
+    // }
+
+
     @GetMapping("/{id}/balance")
-    public Double balance(@PathVariable Long id) {
-        Account a = accounts.findById(id).orElseThrow(() -> new RuntimeException("Account not found"));
-        return a.getBalance();
+    public ResponseEntity<?> balance(@PathVariable("id") Long id, Authentication auth) {
+        // Extract authenticated user from JWT token
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(401).body(Collections.singletonMap("error", "Authentication required"));
+        }
+        
+        // Find the authenticated user
+        AppUser currentUser = users.findByUsername(auth.getName())
+            .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Find the requested account
+        Account account = accounts.findById(id)
+            .orElseThrow(() -> new RuntimeException("Account not found"));
+        
+        // AUTHORIZATION CHECK - Verify account belongs to authenticated user
+        if (!account.getOwnerUserId().equals(currentUser.getId())) {
+            return ResponseEntity.status(403).body(Collections.singletonMap("error", "Access denied - Account does not belong to you"));
+        }
+        
+        // Return balance only if user owns the account
+        return ResponseEntity.ok(Collections.singletonMap("balance", account.getBalance()));
     }
 
     // VULNERABILITY(API4: Unrestricted Resource Consumption) - no rate limiting on transfer

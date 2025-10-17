@@ -1,6 +1,7 @@
 package edu.nu.owaspapivulnlab.web;
 
 import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import edu.nu.owaspapivulnlab.model.AppUser;
@@ -19,10 +20,34 @@ public class UserController {
         this.users = users;
     }
 
-    // VULNERABILITY(API1: BOLA/IDOR) - no ownership check, any authenticated OR anonymous GET (due to SecurityConfig) can fetch any user
+    // // VULNERABILITY(API1: BOLA/IDOR) - no ownership check, any authenticated OR anonymous GET (due to SecurityConfig) can fetch any user
+    // @GetMapping("/{id}")
+    // public AppUser get(@PathVariable("id") Long id) {
+    //     return users.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+    // }
+
+
     @GetMapping("/{id}")
-    public AppUser get(@PathVariable Long id) {
-        return users.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
+    public ResponseEntity<?> get(@PathVariable("id") Long id, org.springframework.security.core.Authentication auth) {
+        // Check if user is authenticated
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+        }
+        
+        // Get the authenticated user from JWT token
+        AppUser currentUser = users.findByUsername(auth.getName())
+            .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
+        
+        // AUTHORIZATION CHECK - Users can only access their own profile
+        if (!currentUser.getId().equals(id)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Forbidden - You can only access your own profile"));
+        }
+        
+        // Return the user data only if they own it
+        AppUser user = users.findById(id)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        return ResponseEntity.ok(user);
     }
 
     // VULNERABILITY(API6: Mass Assignment) - binds role/isAdmin from client
