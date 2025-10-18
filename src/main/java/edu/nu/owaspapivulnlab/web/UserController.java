@@ -85,10 +85,29 @@ public class UserController {
 
     // VULNERABILITY(API5: Broken Function Level Authorization) - allows regular users to delete anyone
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
+    public ResponseEntity<?> delete(@PathVariable("id") Long id, Authentication auth) {
+        // Check authentication
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+        }
+        
+        // Get current user
+        AppUser currentUser = users.findByUsername(auth.getName())
+            .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Only admins can delete
+        if (!currentUser.isAdmin()) {
+            return ResponseEntity.status(403).body(Map.of("error", "Admin access required"));
+        }
+        
+        // Check if user exists
+        if (!users.existsById(id)) {
+            return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+        }
+        
+        // Delete user
         users.deleteById(id);
-        Map<String, String> response = new HashMap<>();
-        response.put("status", "deleted");
-        return ResponseEntity.ok(response);
+
+        return ResponseEntity.ok(Map.of("status", "deleted"));
     }
 }

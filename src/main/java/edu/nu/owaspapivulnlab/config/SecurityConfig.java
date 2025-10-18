@@ -46,8 +46,8 @@ public class SecurityConfig {
         http.authorizeHttpRequests(reg -> reg
                 .requestMatchers("/api/auth/**", "/h2-console/**").permitAll()
                 // VULNERABILITY: broad permitAll on GET allows data scraping (API1/2 depending on context)
-
-                .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/users").permitAll() // allow user creation without authentication
+                .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
         );

@@ -2,7 +2,10 @@ package edu.nu.owaspapivulnlab.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 
 import lombok.*;
 
@@ -17,7 +20,7 @@ public class AppUser {
     // VULNERABILITY(API3: Excessive Data Exposure): storing plaintext passwords for demo
     // Students should hash with BCrypt and use proper credential storage.
     @NotBlank
-    @JsonIgnore 
+    @JsonIgnore
     private String password;
     // VULNERABILITY(API6: Mass Assignment): role and isAdmin are bindable via incoming JSON
     private String role;   // e.g., "USER" or "ADMIN"
@@ -25,7 +28,7 @@ public class AppUser {
 
     @Email
     private String email;
-
+    @JsonSetter("password")
     public void setHashedPassword(String hashedPassword) {
         this.password = hashedPassword;
     }
