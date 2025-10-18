@@ -2,6 +2,7 @@ package edu.nu.owaspapivulnlab.web;
 
 import jakarta.validation.Valid;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -9,7 +10,6 @@ import edu.nu.owaspapivulnlab.model.AppUser;
 import edu.nu.owaspapivulnlab.repo.AppUserRepository;
 import org.springframework.security.core.Authentication;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -44,7 +44,7 @@ public class UserController {
         
         // AUTHORIZATION CHECK - Users can only access their own profile
         if (!currentUser.getId().equals(id)) {
-            return ResponseEntity.status(403).body(Map.of("error", "Forbidden - You can only access your own profile"));
+            return ResponseEntity.status(401).body(Map.of("error", "Forbidden - You can only access your own profile"));
         }
         
         // Return the user data only if they own it
@@ -56,10 +56,11 @@ public class UserController {
 
     // VULNERABILITY(API6: Mass Assignment) - binds role/isAdmin from client
     @PostMapping
-    public AppUser create(@Valid @RequestBody AppUser body) {
+    public ResponseEntity<AppUser> create(@Valid @RequestBody AppUser body) {
         // FIXED: Hash password with BCrypt before saving
         body.setPassword(passwordEncoder.encode(body.getPassword()));
-        return users.save(body);
+        AppUser saved = users.save(body);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     // VULNERABILITY(API9: Improper Inventory + API8 Injection style): naive 'search' that can be abused for enumeration

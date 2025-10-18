@@ -51,17 +51,14 @@ public class SecurityConfig {
 
 
         http.authorizeHttpRequests(reg -> reg
-                .requestMatchers("/api/auth/**", "/h2-console/**").permitAll()
-                
-                .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
-                
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")     // List users - admin only
-                .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN") // Delete users - admin only
-
-                .requestMatchers("/api/**").authenticated()
-
-                .anyRequest().authenticated()
+            .requestMatchers("/api/auth/**", "/h2-console/**").permitAll()
+            .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
+            .requestMatchers("/api/admin/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/users/**").authenticated()
+            .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/api/users/**").hasRole("ADMIN")
+            .requestMatchers("/api/**").authenticated()
+            .anyRequest().authenticated()
         );
 
         // http.headers(h -> h.frameOptions(f -> f.disable())); // allow H2 console
@@ -74,8 +71,24 @@ public class SecurityConfig {
                 .includeSubDomains(true))
         );
 
+        http.exceptionHandling(ex -> ex
+        .authenticationEntryPoint((request, response, authException) -> {
+            // Return 401 for unauthenticated requests
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\":\"Authentication required\"}");
+        })
+        .accessDeniedHandler((request, response, accessDeniedException) -> {  
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\":\"Access denied\"}");
+        })
+    );
+
         http.addFilterBefore(new JwtFilter(secret), org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
         return http.build();
+
+
     }
 
     @Bean
@@ -119,6 +132,7 @@ public class SecurityConfig {
                     // Additional validation
                     String user = c.getSubject();
                     String role = (String) c.get("role");
+                    Integer userId = (Integer) c.get("userId");
                     
                     // Validate required claims exist
                     if (user == null || user.trim().isEmpty()) {
@@ -127,6 +141,18 @@ public class SecurityConfig {
                     
                     if (role == null || role.trim().isEmpty()) {
                         throw new JwtException("Missing or invalid role");
+                    }
+
+                    if (userId == null || userId <= 0) {
+                        throw new JwtException("Missing or invalid userId");
+                    }
+
+                    if (!c.getIssuer().equals("owasp-api-vuln-lab")) {
+                        throw new JwtException("Invalid issuer");
+                    }
+
+                    if (!c.getAudience().equals("api-users")) {
+                        throw new JwtException("Invalid audience");
                     }
                     
                     // Set authentication

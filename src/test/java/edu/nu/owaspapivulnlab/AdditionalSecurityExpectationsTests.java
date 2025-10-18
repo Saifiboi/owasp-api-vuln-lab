@@ -2,6 +2,10 @@ package edu.nu.owaspapivulnlab;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -12,7 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
+import java.util.Date;
 @SpringBootTest
 @AutoConfigureMockMvc
 class AdditionalSecurityExpectationsTests {
@@ -54,12 +58,22 @@ class AdditionalSecurityExpectationsTests {
     }
 
     @Test
-    void jwt_must_be_valid_and_aud_iss_checked() throws Exception {
-        // In fixed app, token without proper issuer/audience should be rejected -> 401
-        // Use existing login token (which lacks iss/aud) to hit a protected endpoint
-        String weak = login("alice","alice123");
-        mvc.perform(get("/api/accounts/mine").header("Authorization","Bearer "+weak))
-                .andExpect(status().isUnauthorized()); // Fails now (returns 200/OK)
+    void jwt_without_issuer_audience_rejected() throws Exception {
+        // Create a token WITHOUT proper issuer/audience
+        String invalidToken = createTokenWithoutIssuerAudience("alice");
+        mvc.perform(get("/api/accounts/mine").header("Authorization","Bearer "+invalidToken))
+                .andExpect(status().isUnauthorized()); // Should fail
+    }
+
+    private String createTokenWithoutIssuerAudience(String username) {
+        return Jwts.builder()
+            .setSubject(username)
+            // NO .setIssuer() or .setAudience() - vulnerable!
+            .setIssuedAt(new Date())
+            .setExpiration(new Date(System.currentTimeMillis() + 3600000))
+            .claim("role", "USER")
+            .signWith(SignatureAlgorithm.HS256, "N8Z1bFBknlVq3vYwr1l8D7sA5t1W8u0qQh5w3g7c2hc=".getBytes())
+            .compact();
     }
 
     @Test
