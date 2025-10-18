@@ -23,8 +23,13 @@ public class AppUser {
     @JsonIgnore
     private String password;
     // VULNERABILITY(API6: Mass Assignment): role and isAdmin are bindable via incoming JSON
-    private String role;   // e.g., "USER" or "ADMIN"
-    private boolean isAdmin;
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)  // Only readable, not writable
+    @Builder.Default
+    private String role = "USER";   // Default to USER
+    
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)  // Only readable, not writable
+    @Builder.Default
+    private boolean isAdmin = false;
 
     @Email
     private String email;
