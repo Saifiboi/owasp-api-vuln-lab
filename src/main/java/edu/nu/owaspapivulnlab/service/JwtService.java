@@ -19,15 +19,20 @@ public class JwtService {
 
     // VULNERABILITY(API8): HS256 with trivial key, long TTL, missing issuer/audience
     public String issue(String subject, Map<String, Object> claims) {
-        long now = System.currentTimeMillis();
+        validateSecret();
         return Jwts.builder()
         .setSubject(subject)
-        .setIssuer("owasp-api-vuln-lab")        // ✅ ADD THIS
-        .setAudience("api-users")               // ✅ ADD THIS
+        .setIssuer("owasp-api-vuln-lab")        
+        .setAudience("api-users")               
         .setIssuedAt(new Date())
-        .setExpiration(new Date(System.currentTimeMillis() + 3600000))
+        .setExpiration(new Date(System.currentTimeMillis() + ttlSeconds * 1000))
         .addClaims(claims)
         .signWith(SignatureAlgorithm.HS256, secret.getBytes())
         .compact();
-}
+    }
+    private void validateSecret() {
+        if (secret == null || secret.length() < 32) {
+            throw new IllegalStateException("JWT secret must be at least 256 bits (32 characters)");
+        }
+    }
 }
