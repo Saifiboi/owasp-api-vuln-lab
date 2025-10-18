@@ -21,11 +21,13 @@ public class JwtService {
     public String issue(String subject, Map<String, Object> claims) {
         long now = System.currentTimeMillis();
         return Jwts.builder()
-                .setSubject(subject)
-                .addClaims(claims)
-                .setIssuedAt(new Date(now))
-                .setExpiration(new Date(now + ttlSeconds * 1000))
-                .signWith(SignatureAlgorithm.HS256, secret.getBytes())
-                .compact();
-    }
+        .setSubject(subject)
+        .setIssuer("owasp-api-vuln-lab")        // ✅ ADD THIS
+        .setAudience("api-users")               // ✅ ADD THIS
+        .setIssuedAt(new Date())
+        .setExpiration(new Date(System.currentTimeMillis() + 3600000))
+        .addClaims(claims)
+        .signWith(SignatureAlgorithm.HS256, secret.getBytes())
+        .compact();
+}
 }

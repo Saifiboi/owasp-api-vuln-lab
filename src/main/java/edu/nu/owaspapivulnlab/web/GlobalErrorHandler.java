@@ -6,7 +6,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import java.util.HashMap;
 import java.util.Map;
 
 // VULNERABILITY(API7): overly verbose error responses
@@ -15,17 +14,13 @@ public class GlobalErrorHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> all(Exception e) {
-        Map<String, String> errorMap = new HashMap<>();
-        errorMap.put("error", e.getClass().getName());
-        errorMap.put("message", e.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(errorMap);
+                .body(Map.of("error", "Internal server error"));
     }
 
     @ExceptionHandler(DataAccessException.class)
     public ResponseEntity<?> db(DataAccessException e) {
-        Map<String, String> errorMap = new HashMap<>();
-        errorMap.put("dbError", e.getMessage());
-        return ResponseEntity.status(500).body(errorMap);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Database error"));
     }
 }
