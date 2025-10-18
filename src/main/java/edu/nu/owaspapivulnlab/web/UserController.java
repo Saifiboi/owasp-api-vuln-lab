@@ -64,8 +64,16 @@ public class UserController {
 
     // VULNERABILITY(API9: Improper Inventory + API8 Injection style): naive 'search' that can be abused for enumeration
     @GetMapping("/search")
-    public List<AppUser> search(@RequestParam String q) {
-        return users.search(q);
+    public List<AppUser> search(@RequestParam("q") String q, Authentication auth) {
+        if (auth == null) {
+            throw new RuntimeException("Login required");
+        }
+        
+        // Simple input check
+        if (q == null || q.length() < 2) {
+            throw new IllegalArgumentException("Search term too short");
+        }
+         return users.findByUsernameContainingIgnoreCase(q);
     }
 
     // VULNERABILITY(API3: Excessive Data Exposure) - returns all users including sensitive fields
